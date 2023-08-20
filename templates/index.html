@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="banner"
+        <h1>Geometric Series Graphing and LaTeX Generator</h1>
+        </div>
+        <div class="input-box">
+            <form action="/" method="POST" class="form-container">
+                <label for="var1">Variable 1:</label>
+                <input type="text" name="var1" id="var1" required>
+
+                <label for="var2">Variable 2:</label>
+                <input type="text" name="var2" id="var2" required>
+
+                <button type="submit">Generate Graph</button>
+            </form>
+        </div>
+
+        <div class="graph-box">
+            {% if chart_data %}
+            <img src="data:image/png;base64,{{ chart_data }}" alt="Matplotlib Graph">
+            <a href="/convert_to_latex" class="btn btn-primary">Convert to LaTeX</a>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
+
+
