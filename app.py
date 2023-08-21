@@ -4,10 +4,13 @@ import io
 import base64
 from flask import Flask, render_template, request, send_file
 import matplotlib.pyplot as plt
-from functools import lru_cache
 import numpy as np
+from plotLRU import plotLRU
 
 app = Flask(__name__)
+# Initialize the LRU caches
+chart_lru_cache = plotLRU(capacity=15)
+latex_lru_cache = plotLRU(capacity=15)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -26,18 +29,27 @@ def convert_to_latex():
     save_latex_to_file(latex_code)
     return send_file('sequence.tex', as_attachment=True)
 
-@lru_cache(maxsize=10)
+
 def generate_chart(var1, var2):
+    cache_key = (var1, var2)
+    if chart_lru_cache.contains_chart(cache_key):
+        return chart_lru_cache.get(cache_key)
+    
     fig, ax, x = gen_plot(var1, var2)
     buffer = io.BytesIO()
     plt.savefig(buffer, format='png')
     plt.close()
     buffer.seek(0)
     chart_data = base64.b64encode(buffer.read()).decode('utf-8')
+    chart_lru_cache.put(cache_key, chart_data)
     return chart_data
 
-@lru_cache(maxsize=10)
+
 def gen_plot(var1, var2):
+    cache_key = (var1, var2)
+    if chart_lru_cache.contains_chart(cache_key):
+        return chart_lru_cache.get(cache_key)
+
     fig, ax = plt.subplots()
     x, y = list(range(1, 30)), [sum(math.pow(var1 * var2, j - 1) for j in range(1, i + 1)) for i in range(1, 30)]
     s = y[-1] 
@@ -49,6 +61,8 @@ def gen_plot(var1, var2):
     plot_fill_between(ax, s, x)
     annotate_info(ax, var2, s, max(x), max(y), x)
     ax.legend(loc='lower right')
+
+    chart_lru_cache.put(cache_key, (fig, ax, x))
     return fig, ax, x
 
 def plot_limit_line(ax, s):
