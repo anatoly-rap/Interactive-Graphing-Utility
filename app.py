@@ -51,44 +51,51 @@ def gen_plot(var1, var2):
         return chart_lru_cache.get(cache_key)
 
     fig, ax = plt.subplots()
-    x, y = list(range(1, 30)), [sum(math.pow(var1 * var2, j - 1) for j in range(1, i + 1)) for i in range(1, 30)]
-    s = y[-1] 
-    ax.axis([0, 30, 0, max(y) + 1])
-    ax.scatter(x, y, s=1.8, color="red", label="a_n sequence")
-    title = '$\sum_{i=1}^\infty' + str(var1) + '\cdot' + str(Fraction(var2).limit_denominator(10)) +'^{i-1}$'
-    plt.title(title, fontsize=7)
+    x = list(range(1, 30))
+    y = [sum(math.pow(var1 * var2, j - 1) for j in range(1, i + 1)) for i in range(1, 30)]
+    s = y[-1]
+    
+    ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+    ax.set_axisbelow(True)
+    ax.scatter(x, y, s=10, color="blue", marker='o', label="a_n sequence")
+    
+    title = '$\sum_{i=1}^\infty' + str(var1) + '\cdot' + str(Fraction(var2).limit_denominator(10)) + '^{i-1}$'
+    plt.title(title, fontsize=10)
+    
     plot_limit_line(ax, s)
     plot_fill_between(ax, s, x)
     annotate_info(ax, var2, s, max(x), max(y), x)
-    ax.legend(loc='lower right')
-
+    
+    ax.set_xlabel('Terms')
+    ax.set_ylabel('Value')
+    ax.legend(loc='best', fontsize=8)
+    
     chart_lru_cache.put(cache_key, (fig, ax, x))
     return fig, ax, x
 
 def plot_limit_line(ax, s):
-    ax.axhline(y=s, color='g', alpha=0.8, linestyle='-', label="limit")
+    ax.axhline(y=s, color='green', alpha=0.8, linestyle='-', label="Limit")
 
 def plot_fill_between(ax, s, x):
     ax.fill_between(x, s - s * 0.08, s + s * 0.08, facecolor='plum', alpha=0.3)
 
 def annotate_info(ax, var2, s, max_x, max_y, x):
     if abs(var2) < 1:
-        annotation_text = 'Since chosen r, |{}| < 1:\n The sequence converges to {:.4f} for the first {} terms'.format(var2, s, np.amax(x))
-        text_position = (max_x - 0.5, max_y + 0.5)
-    elif abs(var2) >= 1:
-        annotation_text = 'Since chosen r, 1 ≤ |{}|:\n The sequence diverges to {:.4f} for the first {} terms'.format(var2, s, np.amax(x))
-        text_position = (max_x - 0.5, max_y + 0.5)
-
+        annotation_text = f'Since chosen r, |{var2}| < 1:\nThe sequence converges to {s:.4f} for the first {np.amax(x)} terms'
+    else:
+        annotation_text = f'Since chosen r, |{var2}| ≥ 1:\nThe sequence diverges for the first {np.amax(x)} terms'
+    
+    text_position = (0.5, 0.5)
     ax.annotate(
         annotation_text,
-        xy=(max_x, max_y),
+        xy=(0.5, 0.5),
+        xycoords='axes fraction',
         xytext=text_position,
-        fontsize=7,
-        arrowprops={"arrowstyle": "->", "color": "y"},
-        bbox={'facecolor': 'white', 'alpha': 0.6, 'pad': 10},
-        horizontalalignment='right',
-        verticalalignment='top',
-        transform=ax.transAxes
+        fontsize=8,
+        arrowprops=dict(facecolor='black', shrink=0.05),
+        bbox=dict(boxstyle="round,pad=0.3", edgecolor='black', facecolor='white', alpha=0.8),
+        horizontalalignment='center',
+        verticalalignment='center'
     )
 
 def generate_latex(var1, var2):
