@@ -2,9 +2,10 @@ import math
 from fractions import Fraction
 import io
 import base64
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, jsonify
 import matplotlib.pyplot as plt
 import numpy as np
+import plotly.graph_objects as go
 from plotLRU import plotLRU
 
 app = Flask(__name__)
@@ -14,21 +15,29 @@ latex_lru_cache = plotLRU(capacity=15)
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    chart_data = None
-    if request.method == 'POST':
-        var1 = float(request.form.get('var1'))
-        var2 = float(request.form.get('var2'))
-        chart_data = generate_chart(var1, var2)
-    return render_template('index.html', chart_data=chart_data)
+    return render_template('index.html')
 
-@app.route('/convert_to_latex', methods=['GET','POST'])
+@app.route('/geometric', methods=['POST'])
+def geometric():
+    var1 = float(request.form.get('var1'))
+    var2 = float(request.form.get('var2'))
+    chart_data = generate_chart(var1, var2)
+    return jsonify(chart_data=chart_data)
+
+@app.route('/3dplot', methods=['POST'])
+def plot_3d():
+    equation = request.form.get('equation')
+    fig = generate_3d_plot(equation)
+    graphJSON = fig.to_json()
+    return graphJSON
+
+@app.route('/convert_to_latex', methods=['GET', 'POST'])
 def convert_to_latex():
-    var1 = float(request.form.get('var1', 0))  
+    var1 = float(request.form.get('var1', 0))
     var2 = float(request.form.get('var2', 0))
     latex_code = generate_latex(var1, var2)
     save_latex_to_file(latex_code)
     return send_file('sequence.tex', as_attachment=True)
-
 
 def generate_chart(var1, var2):
     cache_key = (var1, var2)
@@ -43,7 +52,6 @@ def generate_chart(var1, var2):
     chart_data = base64.b64encode(buffer.read()).decode('utf-8')
     chart_lru_cache.put(cache_key, chart_data)
     return chart_data
-
 
 def gen_plot(var1, var2):
     cache_key = (var1, var2)
@@ -98,6 +106,23 @@ def annotate_info(ax, var2, s, max_x, max_y, x):
         verticalalignment='center'
     )
 
+def generate_3d_plot(equation):
+    x = np.linspace(-10, 10, 400)
+    y = np.linspace(-10, 10, 400)
+    X, Y = np.meshgrid(x, y)
+    try:
+        Z = eval(equation, {"__builtins__": None}, {"np": np, "x": X, "y": Y})
+    except Exception as e:
+        return jsonify({"error": str(e)})
+    
+    fig = go.Figure(data=[go.Surface(z=Z, x=X, y=Y)])
+    fig.update_layout(title='Interactive 3D Plot', autosize=True,
+                      scene=dict(
+                          xaxis_title='X Axis',
+                          yaxis_title='Y Axis',
+                          zaxis_title='Z Axis'))
+    return fig
+
 def generate_latex(var1, var2):
     latex_template = r'''
     \documentclass{article}
@@ -133,3 +158,4 @@ def save_latex_to_file(latex_code):
 if __name__ == '__main__':
     app.debug = True
     app.run()
+
